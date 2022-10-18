@@ -2,7 +2,7 @@
 
 ![image](https://user-images.githubusercontent.com/103941010/194728271-c6d2b63e-5b71-46e9-8eb8-12727617cf07.png)
 
-This is a penetration testing program, written in bash script for Linux, to map out and exploit the ports, services and vulnerabilities of local network devices. This is intended for the Scanning Phase (Host Discovery, Enumeration), Vulnerability Assessment Phase and Exploitation Phase in the Penetration Testing Cycle.
+This is a penetration testing program, written in shell script, to automate the Scanning Phase (Host Discovery, Enumeration), Vulnerability Assessment Phase and Exploitation Phase in the Penetration Testing Cycle.
 
 The brute-force attack will take a long time. If you just want to test if this program works, set your user and password as "kali" for the hosts in the local target network.
 
