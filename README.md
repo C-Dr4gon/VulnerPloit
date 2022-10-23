@@ -19,7 +19,7 @@ SEARCHSPLOIT_VULN(): uses Searchsploit to identify vulnerabilities and potential
 
 HYDRA_BRUTE(): uses Hydra to find weak passwords used in the network's login services, based on scan results
 
-MSF_EXPLOIT(): uses Metapsploit Framework (MSF) to import and execute the exploits identified by Searchsploit (ruby scripts only)
+MSF_EXPLOIT(): uses Metasploit Framework (MSF) to import and execute the exploits identified by Searchsploit (ruby scripts only)
 
 LOG(): shows the user the collated results of NMAP_SCAN(), NMAP_ENUM(), SEARCHSPLOIT_VULN(), HYDRA_BRUTE() and EXPLOIT() 
 
