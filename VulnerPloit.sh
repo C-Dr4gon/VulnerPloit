@@ -97,8 +97,8 @@ function NMAP_SCAN()
     
         ## SCANNING
         # execute nmap scan with -Pn flag to avoid firewall
-		# save the scan output in greppable format for text manipulation later
-        sudo nmap -Pn -T4 -p0-65535 $netrange -oG nmap_scan.txt 2>/dev/null 
+	# save the scan output in greppable format for text manipulation later
+        sudo nmap -Pn -T4 -v -p0-65535 $netrange -oG nmap_scan.txt 2>/dev/null 
         
         ### END
         # let user know that the scan is done
@@ -150,7 +150,7 @@ function NMAP_ENUM()
 		
 		### ENUMERATION
 		# execute standard NSE script (-sC) with version detection (-sV) for all for the open ports for each open host
-		sudo nmap -sC -sV -p$portsstring -T4 $openhost -oX ${openhost}_enum.xml -oN ${openhost}_enum.txt 2>/dev/null 
+		sudo nmap -sC -sV -v -p$portsstring -T4 $openhost -oX ${openhost}_enum.xml -oN ${openhost}_enum.txt 2>/dev/null 
 		
 		### CLEAN-UP
 		# remove the temporary lists to avoid overcrowding the directory (especially for large network range and multiple open ports)
@@ -160,10 +160,10 @@ function NMAP_ENUM()
 	done
 	
 	### END
-    # let user know that the enumeration is done
-    echo " "
-    echo "[+] Nmap Scripting Engine Enumeration has been executed."
-    echo " "
+   	# let user know that the enumeration is done
+   	echo " "
+   	echo "[+] Nmap Scripting Engine Enumeration has been executed."
+	echo " "
 }
 
 ###############################
@@ -246,8 +246,8 @@ function HYDRA_BRUTE()
 		# extract a list of open services by susbtituting space with line break, then filtering the services
 		echo $(cat linedata.txt | tr " " "\n" | grep open | tr "/" " " | awk '{print $4}') > openservices.lst		
       	
-      	### BRUTE-FORCE ATTACK
-      	# brute-force through all the open services for this open host
+      		### BRUTE-FORCE ATTACK
+		# brute-force through all the open services for this open host
 		for openservice in $(cat openservices.lst)
 		do
 			echo "[*] Attacking $openservice on $openhost......"
@@ -282,8 +282,8 @@ function HYDRA_BRUTE()
 function MSF_EXPLOIT()
 {
 	### START
-    echo " "
-    echo "[*] EXECUTION OF MSF_EXPLOIT MODULE:"
+    	echo " "
+   	echo "[*] EXECUTION OF MSF_EXPLOIT MODULE:"
 	echo " "
 	echo "[*] Setting up Metasploit Framework database......"
 	echo " "
