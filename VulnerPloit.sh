@@ -1,8 +1,8 @@
 #!/bin/bash
 
-###########################
+##########################
 ### VULNERPLOIT FUNCTIONS
-###########################
+##########################
 
 # INSTALL(): installs relevant applications and creates relevant directories
 # CONSOLE(): collects user input for session name and network range, creates new directory, and executes the subsequent core functions
