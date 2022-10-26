@@ -150,7 +150,7 @@ function NMAP_ENUM()
 		
 		### ENUMERATION
 		# execute standard NSE script (-sC) with version detection (-sV) for all for the open ports for each open host
-		sudo nmap -sC -sV -v -p$portsstring -T4 $openhost -oX ${openhost}_enum.xml -oN ${openhost}_enum.txt 2>/dev/null 
+		sudo nmap -sC -sV -p$portsstring -T4 $openhost -oX ${openhost}_enum.xml -oN ${openhost}_enum.txt 2>/dev/null 
 		
 		### CLEAN-UP
 		# remove the temporary lists to avoid overcrowding the directory (especially for large network range and multiple open ports)
