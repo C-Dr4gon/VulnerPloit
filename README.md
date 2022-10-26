@@ -26,7 +26,7 @@ LOG(): shows the user the collated results of NMAP_SCAN(), NMAP_ENUM(), SEARCHSP
 
 ## EXECUTION
 
-Execute VulnerMapper.sh with bash to start the script.
+Execute VulnerPloit.sh with bash to start the script.
 
     $ bash VulnerPloit.sh
 
