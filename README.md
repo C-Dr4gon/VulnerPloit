@@ -86,7 +86,7 @@ The program will aggregate the collated results of NMAP_SCAN(), NMAP_ENUM(), SEA
 
 ![image](https://user-images.githubusercontent.com/103941010/197489972-fd5f9cdf-3753-4361-9936-3aa50f5d361b.png)
 
-The program will generate "Vulnerability Map" reports on the terminal and inside the subdirectories of the individual hosts. For this example, the SSH servic everson was detected, and the potential exploits for the version were shown. These exploits are not written in Ruby and need to be manually executed, therefore the MSF automatic exploitation shows no output. The login username and password are also cracked as "kali".
+The program will generate "Vulnerability Map" reports on the terminal and inside the subdirectories of the individual hosts. For this example, the SSH service versiom was detected, and the potential exploits for the version were shown. These exploits are not written in Ruby and need to be manually executed, therefore the MSF exploitation attempt shows no output. The login username and password are also cracked, and both credentials are identified as "kali".
 
 ![image](https://user-images.githubusercontent.com/103941010/197491158-dca0d3d3-3195-438e-9985-077f2dc0c16f.png)
 
