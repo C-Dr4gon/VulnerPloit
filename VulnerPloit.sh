@@ -175,7 +175,7 @@ function NMAP_ENUM()
 function SEARCHSPLOIT_VULN()
 {
 	### START
-    echo " "
+        echo " "
    	echo "[*] EXECUTION OF SEARCHSPLOIT_VULN MODULE:"
 	echo " "
 	echo "[*] Parsing output data from NMAP_ENUM Module..."
